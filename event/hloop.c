@@ -482,7 +482,11 @@ int hloop_run(hloop_t* loop) {
             loop->nactives <= loop->intern_nevents) {
             break;
         }
-        hloop_process_events(loop, HLOOP_MAX_BLOCK_TIME);
+        if (loop->span == 0) {
+          hloop_process_events(loop, HLOOP_MAX_BLOCK_TIME);
+        } else {
+          hloop_process_events(loop, 0);
+        }
         if (loop->flags & HLOOP_FLAG_RUN_ONCE) {
             break;
         }
