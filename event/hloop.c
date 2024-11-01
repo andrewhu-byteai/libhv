@@ -429,6 +429,12 @@ hloop_t* hloop_new(int flags) {
     return loop;
 }
 
+hloop_t* hloop_new_with_span(int flags, int span) {
+  hloop_t* ret = hloop_new(flags);
+  ret->span = span;
+  return ret;
+}
+
 void hloop_free(hloop_t** pp) {
     if (pp == NULL || *pp == NULL) return;
     hloop_t* loop = *pp;
@@ -465,7 +471,9 @@ int hloop_run(hloop_t* loop) {
 
     while (loop->status != HLOOP_STATUS_STOP) {
         if (loop->status == HLOOP_STATUS_PAUSE) {
-            hv_msleep(HLOOP_PAUSE_TIME);
+            if (loop->span == 0) {
+              hv_msleep(HLOOP_PAUSE_TIME);
+            }
             hloop_update_time(loop);
             continue;
         }

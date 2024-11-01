@@ -66,6 +66,8 @@ struct hloop_s {
     int                         eventfds[2];
     event_queue                 custom_events;
     hmutex_t                    custom_events_mutex;
+
+    int                         span;
 };
 
 uint64_t hloop_next_event_id();

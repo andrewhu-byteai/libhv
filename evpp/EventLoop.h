@@ -23,13 +23,13 @@ public:
     // New an EventLoop using an existing hloop_t object,
     // so we can embed an EventLoop object into the old application based on hloop.
     // NOTE: Be careful to deal with destroy of hloop_t.
-    EventLoop(hloop_t* loop = NULL) {
+    EventLoop(hloop_t* loop = NULL, int span = 0) {
         setStatus(kInitializing);
         if (loop) {
             loop_ = loop;
             is_loop_owner = false;
         } else {
-            loop_ = hloop_new(HLOOP_FLAG_AUTO_FREE);
+            loop_ = hloop_new_with_span(HLOOP_FLAG_AUTO_FREE, span);
             is_loop_owner = true;
         }
         connectionNum = 0;
@@ -51,6 +51,8 @@ public:
         if (status() == kRunning) return;
         ThreadLocalStorage::set(ThreadLocalStorage::EVENT_LOOP, this);
         setStatus(kRunning);
+        // if (span) loop_->span = 1;
+        // else loop_->span = 0;
         hloop_run(loop_);
         setStatus(kStopped);
     }

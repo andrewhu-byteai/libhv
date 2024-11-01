@@ -14,9 +14,9 @@ public:
     // Return 0 means OK, other failed.
     typedef std::function<int()> Functor;
 
-    EventLoopThread(EventLoopPtr loop = NULL) {
+    EventLoopThread(EventLoopPtr loop = NULL, int span = 0) {
         setStatus(kInitializing);
-        loop_ = loop ? loop : std::make_shared<EventLoop>();
+        loop_ = loop ? loop : std::make_shared<EventLoop>(nullptr, span);
         setStatus(kInitialized);
     }
 
@@ -78,6 +78,10 @@ public:
             thread_->join();
             thread_ = NULL;
         }
+    }
+
+    std::shared_ptr<std::thread> thread() {
+      return thread_;
     }
 
 private:
