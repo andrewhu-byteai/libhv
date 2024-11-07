@@ -463,6 +463,8 @@ int hloop_run(hloop_t* loop) {
         }
         hmutex_unlock(&loop->custom_events_mutex);
 
+        printf("hmutex_unlock ....\n");
+
 #ifdef DEBUG
         htimer_add(loop, hloop_stat_timer_cb, HLOOP_STAT_TIMEOUT, INFINITE);
         ++loop->intern_nevents;
