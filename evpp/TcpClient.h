@@ -186,6 +186,11 @@ public:
         return channel->isConnected();
     }
 
+    int sendUnsafe(const void* data, int size) {
+      if (!isConnected()) return -1;
+      return channel->writeUnsafe(data, size);
+    }
+
     // send thread-safe
     int send(const void* data, int size) {
         if (!isConnected()) return -1;

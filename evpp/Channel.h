@@ -141,6 +141,11 @@ public:
         return hio_readbytes(io_, len);
     }
 
+    int writeUnsafe(const void* data, int size) {
+      if (!isOpened()) return -1;
+      return hio_write_unsafe(io_, data, size);
+    }
+
     // write thread-safe
     int write(const void* data, int size) {
         if (!isOpened()) return -1;

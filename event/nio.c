@@ -569,6 +569,92 @@ disconnect:
     return nwrite < 0 ? nwrite : -1;
 }
 
+
+int hio_write_unsafe (hio_t* io, const void* buf, size_t len) {
+    if (io->closed) {
+        hloge("hio_write called but fd[%d] already closed!", io->fd);
+        return -1;
+    }
+    int nwrite = 0, err = 0;
+    // hrecursive_mutex_lock(&io->write_mutex);
+#if WITH_KCP
+    if (io->io_type == HIO_TYPE_KCP) {
+        nwrite = hio_write_kcp(io, buf, len);
+        // if (nwrite < 0) goto write_error;
+        goto write_done;
+    }
+#endif
+    if (write_queue_empty(&io->write_queue)) {
+try_write:
+        nwrite = __nio_write(io, buf, len);
+        // printd("write retval=%d\n", nwrite);
+        if (nwrite < 0) {
+            err = socket_errno();
+            if (err == EAGAIN || err == EINTR) {
+                nwrite = 0;
+                hlogw("try_write failed, enqueue!");
+                goto enqueue;
+            } else {
+                // perror("write");
+                io->error = err;
+                goto write_error;
+            }
+        }
+        if (nwrite == len) {
+            goto write_done;
+        }
+        if (nwrite == 0 && (io->io_type & HIO_TYPE_SOCK_STREAM)) {
+            goto disconnect;
+        }
+enqueue:
+        hio_add(io, hio_handle_events, HV_WRITE);
+    }
+    if (nwrite < len) {
+        if (io->write_bufsize + len - nwrite > io->max_write_bufsize) {
+            hloge("write bufsize > %u, close it!", io->max_write_bufsize);
+            io->error = ERR_OVER_LIMIT;
+            goto write_error;
+        }
+        offset_buf_t remain;
+        remain.len = len - nwrite;
+        remain.offset = 0;
+        // NOTE: free in nio_write
+        HV_ALLOC(remain.base, remain.len);
+        memcpy(remain.base, ((char*)buf) + nwrite, remain.len);
+        if (io->write_queue.maxsize == 0) {
+            write_queue_init(&io->write_queue, 4);
+        }
+        write_queue_push_back(&io->write_queue, &remain);
+        io->write_bufsize += remain.len;
+        if (io->write_bufsize > WRITE_BUFSIZE_HIGH_WATER) {
+            hlogw("write len=%u enqueue %u, bufsize=%u over high water %u",
+                (unsigned int)len,
+                (unsigned int)(remain.len - remain.offset),
+                (unsigned int)io->write_bufsize,
+                (unsigned int)WRITE_BUFSIZE_HIGH_WATER);
+        }
+    }
+write_done:
+    // hrecursive_mutex_unlock(&io->write_mutex);
+    if (nwrite > 0) {
+        __write_cb(io, buf, nwrite);
+    }
+    return nwrite;
+write_error:
+disconnect:
+    // hrecursive_mutex_unlock(&io->write_mutex);
+    /* NOTE:
+     * We usually free resources in hclose_cb,
+     * if hio_close_sync, we have to be very careful to avoid using freed resources.
+     * But if hio_close_async, we do not have to worry about this.
+     */
+    if (io->io_type & HIO_TYPE_SOCK_STREAM) {
+        hio_close_async(io);
+    }
+    return nwrite < 0 ? nwrite : -1;
+}
+
+
 int hio_close (hio_t* io) {
     if (io->closed) return 0;
     if (io->destroy == 0 && hv_gettid() != io->loop->tid) {
