@@ -494,7 +494,7 @@ int hloop_run(hloop_t* loop) {
         }
     }
 
-    loop->status = HLOOP_STATUS_STOP;
+    // loop->status = HLOOP_STATUS_STOP;
     loop->end_hrtime = gethrtime_us();
 
     if (loop->flags & HLOOP_FLAG_AUTO_FREE) {
