@@ -377,6 +377,7 @@ HV_EXPORT int hio_read_remain(hio_t* io);
 // NOTE: hio_write is thread-safe, locked by recursive_mutex, allow to be called by other threads.
 // hio_try_write => hio_add(io, HV_WRITE) => write => hwrite_cb
 HV_EXPORT int hio_write  (hio_t* io, const void* buf, size_t len);
+HV_EXPORT int hio_write_unsafe (hio_t* io, const void* buf, size_t len);
 
 // NOTE: hio_close is thread-safe, hio_close_async will be called actually in other thread.
 // hio_del(io, HV_RDWR) => close => hclose_cb
